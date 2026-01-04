@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apocalypse Autopilot v6 — Prompt Studio (Invisible Mechanics)</title>
+  <meta name="color-scheme" content="dark" />
+  <style>
+    :root{
+      --bg0:#05060a;
+      --bg1:#070a12;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.08);
+      --stroke: rgba(255,255,255,.14);
+      --stroke2: rgba(255,255,255,.18);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.68);
+      --faint: rgba(255,255,255,.48);
+      --danger: #ff5a7a;
+      --ok: #37d6a4;
+      --warn:#ffd166;
+      --accent:#7c3aed;
+      --accent2:#22d3ee;
+      --accent3:#f97316;
+      --shadow: 0 24px 80px rgba(0,0,0,.55);
+      --shadow2: 0 10px 30px rgba(0,0,0,.45);
+      --radius: 18px;
+      --radius2: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    html, body { height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 20% 0%, rgba(124,58,237,.20), transparent 60%),
+                  radial-gradient(1000px 700px at 100% 20%, rgba(34,211,238,.14), transparent 55%),
+                  radial-gradient(900px 700px at 70% 110%, rgba(249,115,22,.12), transparent 55%),
+                  linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+    .bg-canvas{
+      position:fixed; inset:0; z-index:-1;
+      opacity:.85;
+      filter: blur(0px);
+      pointer-events:none;
+    }
+    .noise{
+      position:fixed; inset:0; z-index:-1;
+      opacity:.06; pointer-events:none;
+      background-image:
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="4" stitchTiles="stitch"/></filter><rect width="240" height="240" filter="url(%23n)" opacity=".55"/></svg>');
+      background-size:240px 240px;
+      mix-blend-mode: overlay;
+    }
+
+    header{
+      position:sticky; top:0; z-index:20;
+      backdrop-filter: blur(16px);
+      background: linear-gradient(180deg, rgba(6,7,10,.72), rgba(6,7,10,.35));
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .topbar{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 14px 16px;
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .brand{
+      display:flex; gap:12px; align-items:center; min-width: 280px;
+    }
+    .logo{
+      width:40px; height:40px; border-radius: 12px;
+      background:
+        radial-gradient(10px 10px at 25% 30%, rgba(255,255,255,.45), transparent 55%),
+        radial-gradient(14px 14px at 70% 60%, rgba(255,255,255,.18), transparent 65%),
+        linear-gradient(135deg, rgba(124,58,237,.9), rgba(34,211,238,.75));
+      box-shadow: 0 18px 40px rgba(124,58,237,.20), 0 14px 30px rgba(34,211,238,.12);
+      border: 1px solid rgba(255,255,255,.14);
+      position:relative;
+      overflow:hidden;
+    }
+    .logo:after{
+      content:"";
+      position:absolute; inset:-40%;
+      background: conic-gradient(from 180deg, transparent, rgba(255,255,255,.22), transparent);
+      animation: spin 10s linear infinite;
+      opacity:.55;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .brand h1{
+      margin:0;
+      font-size: 14px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.9);
+    }
+    .brand p{
+      margin: 2px 0 0 0;
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 520px;
+    }
+    .top-actions{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: var(--shadow2);
+    }
+    .pill label{
+      font-size: 12px;
+      color: var(--muted);
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    .switch{
+      position:relative;
+      width: 44px;
+      height: 26px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.14);
+      cursor:pointer;
+      transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
+      box-shadow: inset 0 -10px 16px rgba(0,0,0,.28);
+      flex: 0 0 auto;
+    }
+    .switch .knob{
+      position:absolute;
+      top: 3px; left: 3px;
+      width: 20px; height: 20px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.55));
+      box-shadow: 0 10px 18px rgba(0,0,0,.40);
+      transition: transform .18s ease;
+    }
+    .switch[aria-checked="true"]{
+      background: linear-gradient(135deg, rgba(124,58,237,.75), rgba(34,211,238,.55));
+      border-color: rgba(255,255,255,.18);
+      box-shadow: 0 18px 38px rgba(124,58,237,.18), inset 0 -10px 16px rgba(0,0,0,.18);
+    }
+    .switch[aria-checked="true"] .knob{ transform: translateX(18px); }
+
+    main{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap: 14px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .layout{ grid-template-columns: 1fr; }
+      .brand{ min-width: 0; }
+    }
+
+    .panel{
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.045));
+      border: 1px solid rgba(255,255,255,.11);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .panel:before{
+      content:"";
+      position:absolute; inset:-1px;
+      background:
+        radial-gradient(400px 200px at 10% 0%, rgba(124,58,237,.18), transparent 60%),
+        radial-gradient(400px 240px at 95% 10%, rgba(34,211,238,.14), transparent 55%),
+        radial-gradient(420px 260px at 70% 110%, rgba(249,115,22,.10), transparent 55%);
+      opacity:.70;
+      pointer-events:none;
+    }
+    .panel > *{ position:relative; }
+    .panel-header{
+      padding: 14px 14px 12px 14px;
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      justify-content:space-between;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.12);
+    }
+    .panel-header h2{
+      margin:0;
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.86);
+    }
+    .panel-header .sub{
+      margin: 6px 0 0 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+      max-width: 52ch;
+    }
+    .panel-body{
+      padding: 14px;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 980px){
+      .grid2{ grid-template-columns: 1fr; }
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      padding: 10px 10px;
+      border-radius: var(--radius2);
+      background: rgba(0,0,0,.16);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .field label{
+      font-size: 12px;
+      color: var(--muted);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .field label .val{
+      font-variant-numeric: tabular-nums;
+      color: rgba(255,255,255,.85);
+      font-weight: 600;
+    }
+    input[type="text"], select, textarea{
+      width:100%;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 10px 10px;
+      outline:none;
+      font-size: 13px;
+      transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    }
+    input[type="text"]:focus, select:focus, textarea:focus{
+      border-color: rgba(34,211,238,.42);
+      box-shadow: 0 0 0 3px rgba(34,211,238,.16);
+      background: rgba(255,255,255,.075);
+    }
+    select{
+      appearance:none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, rgba(255,255,255,.70) 50%),
+        linear-gradient(135deg, rgba(255,255,255,.70) 50%, transparent 50%);
+      background-position: calc(100% - 16px) calc(50% - 3px), calc(100% - 10px) calc(50% - 3px);
+      background-size: 6px 6px, 6px 6px;
+      background-repeat:no-repeat;
+      padding-right: 30px;
+    }
+
+    input[type="range"]{
+      width:100%;
+      accent-color: var(--accent2);
+    }
+
+    .checks{
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+    .check{
+      display:flex;
+      align-items:flex-start;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(0,0,0,.14);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .check input{
+      margin-top: 2px;
+      accent-color: var(--accent);
+    }
+    .check .txt{
+      flex:1;
+    }
+    .check .txt .t{
+      font-size: 12px;
+      color: rgba(255,255,255,.86);
+      font-weight: 650;
+      letter-spacing: .01em;
+    }
+    .check .txt .d{
+      margin-top: 3px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .btnrow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    button{
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.07);
+      color: rgba(255,255,255,.90);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 13px;
+      cursor:pointer;
+      transition: transform .08s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+      box-shadow: 0 18px 38px rgba(0,0,0,.28);
+      user-select:none;
+    }
+    button:hover{
+      background: rgba(255,255,255,.095);
+      border-color: rgba(255,255,255,.20);
+    }
+    button:active{ transform: translateY(1px); }
+    .primary{
+      background: linear-gradient(135deg, rgba(124,58,237,.82), rgba(34,211,238,.55));
+      border-color: rgba(255,255,255,.18);
+      box-shadow: 0 22px 54px rgba(124,58,237,.18), 0 18px 44px rgba(34,211,238,.12);
+    }
+    .primary:hover{
+      background: linear-gradient(135deg, rgba(124,58,237,.92), rgba(34,211,238,.62));
+    }
+    .danger{
+      background: linear-gradient(135deg, rgba(255,90,122,.82), rgba(249,115,22,.42));
+      border-color: rgba(255,255,255,.16);
+    }
+    .ghost{
+      background: rgba(255,255,255,.04);
+      border-color: rgba(255,255,255,.10);
+      box-shadow: none;
+    }
+
+    .tabs{
+      display:flex;
+      gap: 8px;
+      padding: 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.10);
+      overflow:auto;
+    }
+    .tab{
+      flex: 0 0 auto;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 9px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      color: rgba(255,255,255,.84);
+      font-size: 12px;
+      cursor:pointer;
+      user-select:none;
+      transition: background .2s ease, border-color .2s ease;
+      white-space:nowrap;
+    }
+    .tab[aria-selected="true"]{
+      background: linear-gradient(135deg, rgba(124,58,237,.36), rgba(34,211,238,.18));
+      border-color: rgba(255,255,255,.18);
+      color: rgba(255,255,255,.92);
+    }
+    .tab .dot{
+      width: 8px; height: 8px; border-radius: 999px;
+      background: rgba(255,255,255,.34);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.06);
+    }
+    .tab[aria-selected="true"] .dot{
+      background: linear-gradient(135deg, rgba(124,58,237,.95), rgba(34,211,238,.92));
+      box-shadow: 0 0 0 3px rgba(34,211,238,.12);
+    }
+    .tabpanel{
+      display:none;
+      padding: 14px;
+    }
+    .tabpanel[data-active="true"]{ display:block; }
+
+    .meta{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      margin: 10px 0 12px 0;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(0,0,0,.14);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .meta .stats{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      color: rgba(255,255,255,.84);
+      font-size: 12px;
+      white-space:nowrap;
+    }
+    .badge strong{ color: rgba(255,255,255,.92); }
+    .badge .sw{
+      width: 9px; height: 9px; border-radius: 999px;
+      background: rgba(255,255,255,.38);
+    }
+    .badge.ok .sw{ background: rgba(55,214,164,.9); }
+    .badge.warn .sw{ background: rgba(255,209,102,.92); }
+    .badge.hot .sw{ background: rgba(255,90,122,.92); }
+
+    textarea{
+      min-height: 420px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.45;
+      resize: vertical;
+      padding: 12px 12px;
+      background: rgba(0,0,0,.20);
+    }
+
+    .split{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 980px){
+      .split{ grid-template-columns: 1fr; }
+    }
+    .card{
+      padding: 12px;
+      border-radius: var(--radius2);
+      background: rgba(0,0,0,.14);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .card h3{
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.84);
+    }
+    .card pre{
+      margin: 0;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.10);
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(255,255,255,.88);
+      overflow:auto;
+      max-height: 520px;
+      line-height: 1.45;
+    }
+    .hint{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.10);
+      color: rgba(255,255,255,.88);
+      white-space:nowrap;
+    }
+
+    .toast{
+      position:fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(10,12,18,.78);
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: 0 22px 60px rgba(0,0,0,.55);
+      backdrop-filter: blur(12px);
+      color: rgba(255,255,255,.92);
+      font-size: 12px;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      max-width: min(720px, calc(100vw - 28px));
+      text-align:center;
+    }
+    .toast[data-show="true"]{
+      opacity:1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+
+    footer{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 12px 16px 18px 16px;
+      color: var(--faint);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .fine{
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(0,0,0,.12);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .fine strong{ color: rgba(255,255,255,.86); }
+
+    .sr-only{
+      position:absolute !important;
+      width:1px; height:1px;
+      padding:0; margin:-1px;
+      overflow:hidden;
+      clip:rect(0,0,0,0);
+      white-space:nowrap;
+      border:0;
+    }
+  </style>
+</head>
+<body>
+  <canvas class="bg-canvas" id="bgCanvas" aria-hidden="true"></canvas>
+  <div class="noise" aria-hidden="true"></div>
+
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Apocalypse Autopilot v6 — Prompt Studio</h1>
+          <p>Build a long-running, realistic infected-apocalypse serial prompt that requires only <span class="kbd">NEXT</span> to progress — with <strong>invisible mechanics</strong> (no rolls/checks shown).</p>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <div class="pill" title="Immersion Mode removes meta language and forbids showing any rolls/checks or behind-the-scenes logic in the story text.">
+          <label for="immersionSwitch">Immersion Mode</label>
+          <div class="switch" id="immersionSwitch" role="switch" aria-checked="true" tabindex="0">
+            <div class="knob" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="pill" title="Author Appendix adds continuity logs and save-state after the episode, separated so readers can skip it.">
+          <label for="appendixSwitch">Author Appendix</label>
+          <div class="switch" id="appendixSwitch" role="switch" aria-checked="true" tabindex="0">
+            <div class="knob" aria-hidden="true"></div>
+          </div>
+        </div>
+        <button class="primary" id="btnRefreshTop" type="button" title="Regenerate world seeds and refresh the prompt">Re-roll World + Refresh</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <aside class="panel" aria-label="Controls">
+        <div class="panel-header">
+          <div>
+            <h2>Controls</h2>
+            <div class="sub">Everything here directly changes the generated prompt and the auto-generated world seeds (cast, factions, locations, Season 1 cards).</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="field">
+            <label for="seedPhrase">Seed phrase <span class="val" id="seedInfo"></span></label>
+            <div class="btnrow">
+              <input id="seedPhrase" type="text" value="apocalypse-autopilot-v6" />
+              <button id="btnShuffleSeed" class="ghost" type="button" title="Create a new random seed phrase">Shuffle</button>
+            </div>
+            <div class="hint">Same seed ⇒ same cast/factions/locations/Season 1 cards. Useful for reproducibility.</div>
+          </div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <div class="field">
+              <label for="region">Region / setting <span class="val">free text</span></label>
+              <input id="region" type="text" value="Seattle–Tacoma–Olympia corridor, present day" />
+            </div>
+            <div class="field">
+              <label for="povCount">POV count <span class="val" id="povVal">5</span></label>
+              <input id="povCount" type="range" min="4" max="6" step="1" value="5" />
+              <div class="hint">Keeps rotation manageable and continuity tight.</div>
+            </div>
+          </div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <div class="field">
+              <label for="episodeLen">Episode length <span class="val" id="lenVal">1,500–2,300</span></label>
+              <select id="episodeLen">
+                <option value="1500-2300" selected>1,500–2,300 words</option>
+                <option value="1200-1800">1,200–1,800 words</option>
+                <option value="2000-3000">2,000–3,000 words</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="grit">Grit level <span class="val" id="gritVal">70</span></label>
+              <input id="grit" type="range" min="0" max="100" step="1" value="70" />
+              <div class="hint">Higher grit ⇒ more logistics/illness/injury consequences; less cinematic gloss.</div>
+            </div>
+          </div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <div class="field">
+              <label for="ratchetFreq">Ratchet frequency <span class="val" id="ratchetVal">3</span></label>
+              <input id="ratchetFreq" type="range" min="2" max="5" step="1" value="3" />
+              <div class="hint">Every N episodes: a permanent loss (place/tool/relationship/mobility).</div>
+            </div>
+            <div class="field">
+              <label for="rebuildFreq">Rebuild frequency <span class="val" id="rebuildVal">5</span></label>
+              <input id="rebuildFreq" type="range" min="3" max="7" step="1" value="5" />
+              <div class="hint">Every N episodes: attempt institution-building (small, messy, political).</div>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top:10px;">
+            <label>Autopilot profile <span class="val" id="autopilotSummary">Minimal input</span></label>
+            <div class="checks" role="group" aria-label="Autopilot profile options">
+              <div class="check">
+                <input id="chkNoQuestions" type="checkbox" checked />
+                <div class="txt">
+                  <div class="t">No questions, ever</div>
+                  <div class="d">If details are missing, the model picks plausible defaults and continues.</div>
+                </div>
+              </div>
+              <div class="check">
+                <input id="chkNextOnly" type="checkbox" checked />
+                <div class="txt">
+                  <div class="t">Progress on <span class="kbd">NEXT</span> alone</div>
+                  <div class="d">Any other user text becomes a soft hint; it never blocks continuation.</div>
+                </div>
+              </div>
+              <div class="check">
+                <input id="chkHideMechanics" type="checkbox" checked />
+                <div class="txt">
+                  <div class="t">Invisible mechanics (immersion-safe)</div>
+                  <div class="d">If the model does rolls/checks/table draws internally, it must never mention them or show numbers.</div>
+                </div>
+              </div>
+              <div class="check">
+                <input id="chkAllowMechCommand" type="checkbox" />
+                <div class="txt">
+                  <div class="t">Allow a reveal command for debugging</div>
+                  <div class="d">Adds an optional command to show behind-the-scenes mechanics if explicitly requested (off by default).</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top:10px;">
+            <label>Embed world seeds in prompt <span class="val" id="embedSummary">On</span></label>
+            <div class="checks" role="group" aria-label="Embed options">
+              <div class="check">
+                <input id="chkEmbedCast" type="checkbox" checked />
+                <div class="txt">
+                  <div class="t">Include generated cast sheets</div>
+                  <div class="d">Reduces invention drift and keeps the serial consistent without author effort.</div>
+                </div>
+              </div>
+              <div class="check">
+                <input id="chkEmbedFactions" type="checkbox" checked />
+                <div class="txt">
+                  <div class="t">Include generated factions</div>
+                  <div class="d">Provides ongoing political engines without needing user guidance.</div>
+                </div>
+              </div>
+              <div class="check">
+                <input id="chkEmbedLocations" type="checkbox" checked />
+                <div class="txt">
+                  <div class="t">Include generated locations</div>
+                  <div class="d">Recurring “sets” produce recurring problems and reduce deus-ex-stockpile.</div>
+                </div>
+              </div>
+              <div class="check">
+                <input id="chkEmbedSeason1" type="checkbox" checked />
+                <div class="txt">
+                  <div class="t">Include Season 1 episode cards</div>
+                  <div class="d">The model follows the prebuilt spine; still free to write naturally.</div>
+                </div>
+              </div>
+              <div class="check">
+                <input id="chkIncludeSaveState" type="checkbox" checked />
+                <div class="txt">
+                  <div class="t">Include SAVE_STATE (pasteable)</div>
+                  <div class="d">Keeps continuity stable across long runs; placed in the Author Appendix.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="btnrow" style="margin-top:12px;">
+            <button class="primary" id="btnGenerate" type="button">Refresh Prompt</button>
+            <button id="btnCopyPrompt" type="button">Copy Prompt</button>
+            <button id="btnDownloadPrompt" type="button">Download .txt</button>
+            <button class="ghost" id="btnCopySeason" type="button">Copy Season 1 Cards</button>
+            <button class="danger" id="btnRerollWorld" type="button">Re-roll World Seeds</button>
+          </div>
+
+          <div class="hint" style="margin-top:10px;">
+            Reader immersion tip: keep <strong>Immersion Mode</strong> on, and keep <strong>Author Appendix</strong> on only if you need continuity tracking. The episode text stays clean either way.
+          </div>
+        </div>
+      </aside>
+
+      <section class="panel" aria-label="Output">
+        <div class="tabs" role="tablist" aria-label="Output tabs">
+          <button class="tab" role="tab" aria-selected="true" aria-controls="tabPrompt" id="tPrompt" type="button"><span class="dot" aria-hidden="true"></span> Master Prompt</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="tabSeason" id="tSeason" type="button"><span class="dot" aria-hidden="true"></span> Season 1 Cards</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="tabWorld" id="tWorld" type="button"><span class="dot" aria-hidden="true"></span> World Seeds</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="tabChecks" id="tChecks" type="button"><span class="dot" aria-hidden="true"></span> Immersion Guard</button>
+        </div>
+
+        <div id="tabPrompt" class="tabpanel" role="tabpanel" aria-labelledby="tPrompt" data-active="true">
+          <div class="meta">
+            <div class="stats">
+              <span class="badge ok" id="bImmersion"><span class="sw" aria-hidden="true"></span> <strong>Immersion</strong>: on</span>
+              <span class="badge warn" id="bAppendix"><span class="sw" aria-hidden="true"></span> <strong>Appendix</strong>: on</span>
+              <span class="badge" id="bEmbed"><span class="sw" aria-hidden="true"></span> <strong>Embedded seeds</strong>: cast, factions, locations, S1</span>
+            </div>
+            <div class="stats">
+              <span class="badge" id="bWords"><strong>Words</strong>: 0</span>
+              <span class="badge" id="bChars"><strong>Chars</strong>: 0</span>
+            </div>
+          </div>
+
+          <textarea id="promptOut" spellcheck="false" aria-label="Generated master prompt"></textarea>
+          <div class="hint" style="margin-top:10px;">
+            Use: paste this into your writing model. Then just type <span class="kbd">NEXT</span> to continue the serial with minimal input. If you keep the appendix on, the story stays immersive, and the bookkeeping is separated.
+          </div>
+        </div>
+
+        <div id="tabSeason" class="tabpanel" role="tabpanel" aria-labelledby="tSeason" data-active="false">
+          <div class="split">
+            <div class="card">
+              <h3>Season 1 cards (immersion-safe)</h3>
+              <pre id="seasonOut" aria-label="Season 1 episode cards"></pre>
+              <div class="btnrow" style="margin-top:10px;">
+                <button id="btnRegenerateSeason" class="primary" type="button">Rebuild Season 1 (same seed)</button>
+                <button id="btnCopySeason2" type="button">Copy</button>
+                <button id="btnDownloadSeason" type="button">Download .txt</button>
+              </div>
+              <div class="hint" style="margin-top:10px;">These cards never show dice/rolls/checks. They’re written like a writer’s room beat sheet, not a game log.</div>
+            </div>
+            <div class="card">
+              <h3>Why this lasts</h3>
+              <div class="hint">
+                <ul style="margin:0; padding-left: 18px;">
+                  <li><strong>System pressure</strong> (water, wounds, sanitation, sleep) constantly produces new problems.</li>
+                  <li><strong>Faction motion</strong> keeps human conflict believable (no cartoon villains required).</li>
+                  <li><strong>Ratchet + Rebuild</strong> prevents endless loops: something breaks permanently, then they attempt to build anyway.</li>
+                  <li><strong>Invisible mechanics</strong> keeps outcomes varied while the prose stays fully immersive.</li>
+                </ul>
+              </div>
+              <div class="hint" style="margin-top:10px;">
+                If you want a more “reader-only” experience, turn <strong>Author Appendix</strong> off. If you want maximum continuity stability, keep it on and treat it as notes after the chapter.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tabWorld" class="tabpanel" role="tabpanel" aria-labelledby="tWorld" data-active="false">
+          <div class="split">
+            <div class="card">
+              <h3>Cast sheets (generated)</h3>
+              <pre id="castOut" aria-label="Generated cast sheets"></pre>
+              <div class="btnrow" style="margin-top:10px;">
+                <button id="btnCopyCast" type="button">Copy</button>
+                <button id="btnDownloadCast" type="button">Download .txt</button>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Factions + locations (generated)</h3>
+              <pre id="worldOut" aria-label="Generated factions and locations"></pre>
+              <div class="btnrow" style="margin-top:10px;">
+                <button id="btnCopyWorld" type="button">Copy</button>
+                <button id="btnDownloadWorld" type="button">Download .txt</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tabChecks" class="tabpanel" role="tabpanel" aria-labelledby="tChecks" data-active="false">
+          <div class="card">
+            <h3>Immersion Guard (no visible rolls/checks)</h3>
+            <div class="hint">
+              <p style="margin:0 0 10px 0;">
+                Your requirement is baked into the prompt: if the model uses any “rolls,” “checks,” probability, tables, or internal move-resolution, it must do it <strong>silently</strong> and present only narrative cause-and-effect.
+              </p>
+              <ul style="margin:0; padding-left: 18px;">
+                <li><strong>Forbidden in story text:</strong> roll, check, DC, percentage, RNG, random table, “the dice decide,” “I drew,” “mechanics,” “A-plot/B-plot,” “Episode 7,” “Season 2.”</li>
+                <li><strong>Allowed:</strong> consequences, uncertainty, misreads, bad timing, human error, realistic luck.</li>
+                <li><strong>Optional:</strong> if you enable “reveal command,” the prompt adds a debugging command that reveals behind-the-scenes only when explicitly requested—never by default.</li>
+              </ul>
+              <p style="margin:10px 0 0 0;">
+                This keeps the reader experience clean while still giving the engine variability and fairness. The story feels like life, not like a character sheet.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="fine">
+      <strong>Note:</strong> This studio generates a prompt and consistent world seeds. It does not connect to external services and does not store anything (no local storage). If you reload the page, copy your prompt (and SAVE_STATE if used) first.
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function(){
+      'use strict';
+
+      const $ = (sel, el=document) => el.querySelector(sel);
+      const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+
+      function xmur3(str) {
+        let h = 1779033703 ^ str.length;
+        for (let i = 0; i < str.length; i++) {
+          h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+          h = (h << 13) | (h >>> 19);
+        }
+        return function() {
+          h = Math.imul(h ^ (h >>> 16), 2246822507);
+          h = Math.imul(h ^ (h >>> 13), 3266489909);
+          return (h ^= h >>> 16) >>> 0;
+        };
+      }
+      function mulberry32(a) {
+        return function() {
+          let t = a += 0x6D2B79F5;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+      function makeRng(seedStr){
+        const seed = xmur3(seedStr)();
+        return mulberry32(seed);
+      }
+      function pick(rng, arr){
+        return arr[Math.floor(rng() * arr.length)];
+      }
+      function shuffle(rng, arr){
+        const a = arr.slice();
+        for(let i=a.length-1;i>0;i--){
+          const j = Math.floor(rng()*(i+1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+      function uniqBy(arr, keyFn){
+        const seen = new Set();
+        const out = [];
+        for(const x of arr){
+          const k = keyFn(x);
+          if(seen.has(k)) continue;
+          seen.add(k);
+          out.push(x);
+        }
+        return out;
+      }
+
+      function toast(msg){
+        const t = $('#toast');
+        t.textContent = msg;
+        t.dataset.show = 'true';
+        clearTimeout(toast._tm);
+        toast._tm = setTimeout(()=>{ t.dataset.show = 'false'; }, 1400);
+      }
+
+      function bytesToHex(bytes){
+        return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+      }
+      function randomSeedPhrase(){
+        const b = new Uint8Array(8);
+        crypto.getRandomValues(b);
+        return 'seed-' + bytesToHex(b);
+      }
+
+      const decks = {
+        firstNames: ["Maya","Jordan","Elena","Sam","Avery","Noah","Leila","Marcus","Priya","Dante","Nina","Caleb","Hannah","Omar","Tessa","Miguel","Renee","Kai","Inez","Logan","Sofia","Ethan","Ruth","Vic","Naomi","Jae","Marisol","Graham","Zoe","Amir","Jo","Tariq","Lena","Isabel","Dev","Sara","Ben","Asha","Cole","Kira","Adrian","June","Reed","Farah","Milo","Carmen","Theo","Alicia","Parker","Jules"],
+        lastNames: ["Nguyen","Patel","Carter","Kim","Morales","Johnson","Singh","Reed","Martinez","Brooks","Hassan","Chen","Diaz","Rivera","Bennett","Foster","Gomez","Wright","Ali","Santos","Price","Lopez","Khan","Turner","Clark","Evans","Scott","Collins","Ramirez","Bailey","Wood","Kelly","Rossi","Morgan","Murphy","Barnes","Howard","Phillips","Ward","Jenkins","Fischer","Shaw","Hughes","Coleman","Webb","Pierce","Watson","Li","Russell","Mendoza"],
+        dependencies: [
+          "prescription glasses for distance vision",
+          "asthma inhaler that runs low fast",
+          "blood pressure medication with withdrawal headaches",
+          "insulin that needs careful handling and steady meals",
+          "hearing aid batteries that are hard to find",
+          "migraine meds that blunt panic but are limited",
+          "knee brace that makes stairs a gamble",
+          "chronic back pain that flares under load carrying",
+          "anxiety medication that becomes a scarcity problem",
+          "contact lenses that become unusable when water is scarce"
+        ],
+        fears: [
+          "being responsible for someone's death",
+          "being trapped and unheard while help is close",
+          "making the wrong call and doubling down out of pride",
+          "becoming the kind of person they used to fear",
+          "watching a loved one suffer because they hesitated",
+          "being the last one alive and having to remember everyone",
+          "being forced to choose who gets care and who doesn't"
+        ],
+        lines: [
+          "won’t abandon a child or dependent, even if it costs them",
+          "won’t lie to someone who trusts them—until they do",
+          "won’t kill a living person unless there is no other option",
+          "won’t steal from the desperate (but rationalizes 'borrowing')",
+          "won’t leave someone behind if they can still move",
+          "won’t trade medical care for loyalty"
+        ],
+        arcWounds: [
+          "believes systems will hold if good people do their jobs",
+          "believes truth always wins if you explain it clearly",
+          "believes strength means never needing help",
+          "believes rules are what keep us human",
+          "believes love is a liability in a crisis",
+          "believes they can carry everyone if they just try harder"
+        ],
+        breakPoints: [
+          "a preventable death they feel was their fault",
+          "a betrayal from someone they protected",
+          "a forced quarantine decision involving a friend",
+          "losing access to their dependency item",
+          "being ordered to do something they consider unforgivable"
+        ],
+        factionArchetypes: [
+          { name:"Mutual Aid Dispatch", publicStory:"neighbors coordinating supplies and rides", privateTruth:"they triage who is 'worth the risk' quietly", controls:"information flow and volunteer labor", lacks:"medical supplies and secure storage", recruitment:"voluntary, but reputation-driven", justice:"restorative until theft becomes survival", offer:"intel + escorts", refuse:"handing over a vulnerable person" },
+          { name:"Portside Union Crew", publicStory:"keeping critical docks moving", privateTruth:"they're building a toll system", controls:"access to marine routes and heavy equipment", lacks:"meds and legitimacy outside the waterfront", recruitment:"transactional; skills rewarded", justice:"work-tribunal; harsh on sabotage", offer:"transport + tools", refuse:"free passage without payment" },
+          { name:"Civic Shelter Committee", publicStory:"keeping a school gym shelter running", privateTruth:"paper rules hiding burnout and favoritism", controls:"beds, kitchens, a small security team", lacks:"water stability and trained medical staff", recruitment:"residents must 'contribute'", justice:"rulebook that shifts under stress", offer:"safe sleep + meals", refuse:"anyone who threatens order publicly" },
+          { name:"Fragmented Patrol Unit", publicStory:"protecting the community", privateTruth:"morale is collapsing; loyalty is local", controls:"some radios, authority aura, limited arms abstractly", lacks:"clear command and supplies", recruitment:"informal; friends of friends", justice:"improvised; inconsistent", offer:"checkpoints + escort", refuse:"being told what to do by civilians" },
+          { name:"Faith Hall Network", publicStory:"food lines and counseling", privateTruth:"they’re becoming the de facto court", controls:"community trust and indoor space", lacks:"mobility and perimeter security", recruitment:"belonging and obligation", justice:"mercy-first, exile when needed", offer:"care + mediation", refuse:"trading people as currency" },
+          { name:"Bike Courier Mesh", publicStory:"delivering messages and medicine runs", privateTruth:"they gatekeep routes as leverage", controls:"mobility when roads clog", lacks:"shelter depth and backup manpower", recruitment:"skill-based; risky initiation", justice:"reputation economy", offer:"delivery + scouting", refuse:"jobs that endanger the whole mesh" },
+          { name:"Clinic Remnant Staff", publicStory:"healthcare wherever possible", privateTruth:"they hoard antibiotics out of desperation", controls:"medical knowledge and triage protocols", lacks:"power, sanitation, and security", recruitment:"mission-driven", justice:"ethics committees that fracture", offer:"care + credibility", refuse:"being used as a bargaining chip" },
+          { name:"Apartment Block Council", publicStory:"tenant-led defense and rationing", privateTruth:"one floor is quietly starving", controls:"vertical shelter and watch rotations", lacks:"water and evacuation routes", recruitment:"coercive under the mask of 'votes'", justice:"council hearings", offer:"shelter + manpower", refuse:"sharing their stored supplies widely" },
+          { name:"Contractor Yard Collective", publicStory:"repairs for trade", privateTruth:"they’re deciding who gets infrastructure back", controls:"tools, generators abstractly, know-how", lacks:"fuel and spare parts", recruitment:"transactional", justice:"tool-code: steal once, out forever", offer:"repairs + training", refuse:"jobs without tangible payment" },
+          { name:"Courtroom-in-Exile", publicStory:"keeping due process alive", privateTruth:"they can’t enforce anything without allies", controls:"legitimacy language and dispute process", lacks:"force and food", recruitment:"ideological; education-focused", justice:"procedural to a fault", offer:"arbitration + records", refuse:"summary punishments" }
+        ],
+        locationArchetypes: [
+          { set:"Hospital back corridor", provides:"medical supplies, trained people, hard choices", costs:"crowds, fear, infections, security", complication:"triage turns moral", claim:"clinic remnant staff" },
+          { set:"Bus depot perimeter", provides:"fencing, maps, vehicles that need maintenance", costs:"noise and visibility", complication:"fuel becomes a curse", claim:"bus-driver-led crew" },
+          { set:"Courthouse holding area", provides:"secure rooms and records", costs:"symbolic target for anger", complication:"justice vs mercy conflict", claim:"courtroom-in-exile" },
+          { set:"Electrical substation edge", provides:"power potential and technical puzzles", costs:"danger, strict limits, high stakes", complication:"one mistake burns everything", claim:"contractor collective" },
+          { set:"School gym shelter", provides:"beds, kitchens, community", costs:"disease risk and politics", complication:"quarantine breaks", claim:"civic shelter committee" },
+          { set:"Water treatment perimeter", provides:"clean water possibility", costs:"heavy security needs", complication:"contamination scare", claim:"fragmented patrol unit" },
+          { set:"Grocery distribution spur", provides:"canned goods and pallets", costs:"crowds and rumors", complication:"stampede risk", claim:"apartment block council" },
+          { set:"Marina and slips", provides:"alternate routes and quiet approaches", costs:"weather dependence", complication:"boats become disputes", claim:"portside union crew" },
+          { set:"Freeway on-ramp bottleneck", provides:"access to travel lanes", costs:"kill funnel dynamics", complication:"abandoned vehicles jam", claim:"nobody, contested" },
+          { set:"Community college labs (closed)", provides:"equipment and knowledge", costs:"misinterpretation, false hope", complication:"someone wants a 'cure' story", claim:"bio-instructor POV" },
+          { set:"Neighborhood clinic storefront", provides:"care corner and trust", costs:"lines and desperation", complication:"meds theft with sympathetic motive", claim:"clinic remnant staff" },
+          { set:"Hardware store back aisle", provides:"tools and repair parts", costs:"risk of collapse/alarms", complication:"tool break triggers cascade", claim:"contractor collective" }
+        ],
+        logisticsProblems: [
+          "water access becomes unreliable and forces a risky run",
+          "sanitation fails quietly until sickness starts spreading",
+          "a wound worsens because proper cleaning is impossible",
+          "the shelter’s security depends on a repair nobody wants to do",
+          "mobility collapses when a key transport option becomes unusable",
+          "power/heat becomes a tradeoff: comfort versus attention",
+          "a stash spoils or becomes contaminated, cutting food quality"
+        ],
+        relationshipProblems: [
+          "a promise turns into a burden someone resents",
+          "two people interpret the same risk in incompatible ways",
+          "someone’s guilt makes them reckless and hard to stop",
+          "a leader’s authority is challenged at the worst time",
+          "a quiet betrayal happens for a sympathetic reason",
+          "a secret about a past decision surfaces under pressure"
+        ],
+        infoProblems: [
+          "a rumor spreads faster than confirmation and shapes behavior",
+          "a trusted source is wrong in a costly way",
+          "conflicting 'official' messages create dangerous assumptions",
+          "someone withholds information to prevent panic",
+          "a missing person case becomes a cloud of false sightings"
+        ],
+        costlyChoices: [
+          "spend time to do it right, or rush and pay later in injury/trust",
+          "help strangers now, or preserve resources for the group",
+          "keep a rule for legitimacy, or break it for survival",
+          "stay quiet and safe, or make noise to save someone",
+          "quarantine a friend, or gamble the whole shelter"
+        ],
+        hooks: [
+          "a familiar voice comes over a radio at the wrong moment",
+          "the 'safe' route changes overnight",
+          "a faction offers help that feels like a trap",
+          "a bite is suspected, and someone disappears before sunrise",
+          "the weather turns, making yesterday’s plan impossible",
+          "a debt comes due with interest"
+        ],
+        titleAdj: ["Quiet","Noisy","Borrowed","Last","Blue","Cold","Thin","Broken","Second","Shallow","Hollow","Soft","Hard","Blunt","Fever","Tight","Tangled","Small","Open","Narrow"],
+        titleNoun: ["Water","Stairs","Promise","Route","Clinic","Fence","Signal","Ledger","Bridge","Line","Door","Shelter","Triage","Debt","Light","Silence","Map","Ration","Vote","Storm"]
+      };
+
+      const rolesDefault = [
+        { role:"ER nurse", anchor:"triage instincts, moral weight" },
+        { role:"city bus driver", anchor:"routes, people sense, improvisation" },
+        { role:"community college biology instructor", anchor:"evidence thinking, fragile under chaos" },
+        { role:"public defender", anchor:"negotiation, ethics, systems knowledge" },
+        { role:"electrical lineworker", anchor:"infrastructure know-how, injury risk" }
+      ];
+
+      function makeName(rng){
+        return pick(rng, decks.firstNames) + " " + pick(rng, decks.lastNames);
+      }
+
+      function genCast(seed, povCount){
+        const rng = makeRng(seed + "|cast|" + povCount);
+        const roles = rolesDefault.slice(0, povCount);
+        const cast = roles.map((r, idx) => {
+          const name = makeName(rng);
+          const dependency = pick(rng, decks.dependencies);
+          const fear = pick(rng, decks.fears);
+          const line = pick(rng, decks.lines);
+          const arcWound = pick(rng, decks.arcWounds);
+          const breakPoint = pick(rng, decks.breakPoints);
+          return { idx, name, role:r.role, anchor:r.anchor, dependency, fear, line, arcWound, breakPoint };
+        });
+
+        // Relationship triangle/ring
+        const rel = [];
+        for(let i=0;i<cast.length;i++){
+          const a = cast[i];
+          const b = cast[(i+1)%cast.length];
+          const c = cast[(i+2)%cast.length];
+          rel.push(`${a.name} trusts ${b.name} in public but doubts them in private; ${a.name} needs ${c.name} for a reason they avoid admitting.`);
+        }
+
+        return { cast, rel };
+      }
+
+      function genFactions(seed){
+        const rng = makeRng(seed + "|factions");
+        const pool = shuffle(rng, decks.factionArchetypes);
+        const n = 7 + (rng() < 0.35 ? 1 : 0); // 7 or 8
+        const chosen = pool.slice(0, Math.min(n, pool.length));
+        const factions = chosen.map((f, i) => ({
+          id: i+1,
+          name: f.name,
+          publicStory: f.publicStory,
+          privateTruth: f.privateTruth,
+          controls: f.controls,
+          lacks: f.lacks,
+          recruitment: f.recruitment,
+          justice: f.justice,
+          offer: f.offer,
+          refuse: f.refuse
+        }));
+        return factions;
+      }
+
+      function genLocations(seed){
+        const rng = makeRng(seed + "|locations");
+        const pool = shuffle(rng, decks.locationArchetypes);
+        const n = 12;
+        const chosen = pool.slice(0, Math.min(n, pool.length));
+        return chosen.map((l,i)=>({ id:i+1, ...l }));
+      }
+
+      function episodeTitle(rng){
+        return `The ${pick(rng, decks.titleAdj)} ${pick(rng, decks.titleNoun)}`;
+      }
+
+      function genSeason1(seed, ratchetFreq, rebuildFreq, povCount){
+        const rng = makeRng(seed + "|season1|" + ratchetFreq + "|" + rebuildFreq + "|" + povCount);
+        const logistics = shuffle(rng, decks.logisticsProblems);
+        const relations = shuffle(rng, decks.relationshipProblems);
+        const info = shuffle(rng, decks.infoProblems);
+        const choice = shuffle(rng, decks.costlyChoices);
+        const hooks = shuffle(rng, decks.hooks);
+
+        const episodes = [];
+        for(let ep=1; ep<=10; ep++){
+          const pov = rolesDefault[(ep-1) % povCount].role;
+          const isRatchet = (ep % ratchetFreq === 0);
+          const isRebuild = (ep % rebuildFreq === 0);
+
+          episodes.push({
+            ep,
+            title: episodeTitle(rng),
+            spotlight: pov,
+            a: logistics[(ep-1) % logistics.length],
+            b: relations[(ep-1) % relations.length],
+            c: info[(ep-1) % info.length],
+            choice: choice[(ep-1) % choice.length],
+            hook: hooks[(ep-1) % hooks.length],
+            ratchet: isRatchet,
+            rebuild: isRebuild
+          });
+        }
+        return episodes;
+      }
+
+      function formatCast(castPkg){
+        const { cast, rel } = castPkg;
+        let out = "";
+        out += "CAST (POV MAX)\n";
+        out += "----------------\n";
+        cast.forEach((c,i)=>{
+          out += `${i+1}) ${c.name} — ${c.role}\n`;
+          out += `   Anchor: ${c.anchor}\n`;
+          out += `   Dependency: ${c.dependency}\n`;
+          out += `   Fear: ${c.fear}\n`;
+          out += `   Line: ${c.line}\n`;
+          out += `   Arc Wound: ${c.arcWound}\n`;
+          out += `   Break Point: ${c.breakPoint}\n\n`;
+        });
+        out += "RELATIONSHIP RING (tension engine)\n";
+        out += "---------------------------------\n";
+        rel.forEach((r,i)=>{ out += `- ${r}\n`; });
+        return out.trim();
+      }
+
+      function formatWorld(factions, locations){
+        let out = "";
+        out += "FACTIONS (no cartoon villains)\n";
+        out += "------------------------------\n";
+        factions.forEach(f=>{
+          out += `${f.id}) ${f.name}\n`;
+          out += `   Public story: ${f.publicStory}\n`;
+          out += `   Private truth: ${f.privateTruth}\n`;
+          out += `   Controls: ${f.controls}\n`;
+          out += `   Lacks: ${f.lacks}\n`;
+          out += `   Recruitment: ${f.recruitment}\n`;
+          out += `   Justice: ${f.justice}\n`;
+          out += `   Offer: ${f.offer}\n`;
+          out += `   Refuse: ${f.refuse}\n\n`;
+        });
+
+        out += "LOCATIONS AS PLOT ENGINES (recurring sets)\n";
+        out += "-----------------------------------------\n";
+        locations.forEach(l=>{
+          out += `${l.id}) ${l.set}\n`;
+          out += `   Provides: ${l.provides}\n`;
+          out += `   Costs: ${l.costs}\n`;
+          out += `   Complication: ${l.complication}\n`;
+          out += `   Likely claimant: ${l.claim}\n\n`;
+        });
+        return out.trim();
+      }
+
+      function formatSeason(season){
+        let out = "";
+        out += "SEASON 1 — 10 EPISODE CARDS\n";
+        out += "==========================\n";
+        season.forEach(e=>{
+          out += `EP ${String(e.ep).padStart(2,'0')}: ${e.title}\n`;
+          out += `- Spotlight: ${e.spotlight}\n`;
+          out += `- Logistics pressure: ${e.a}\n`;
+          out += `- Relationship pressure: ${e.b}\n`;
+          out += `- Information pressure: ${e.c}\n`;
+          out += `- Costly choice: ${e.choice}\n`;
+          out += `- End hook: ${e.hook}\n`;
+          const flags = [];
+          if(e.ratchet) flags.push("RATCHET (permanent loss)");
+          if(e.rebuild) flags.push("REBUILD (institution attempt)");
+          if(flags.length) out += `- Special: ${flags.join(" + ")}\n`;
+          out += "\n";
+        });
+        out += "Notes: These cards are a spine. The prose must feel natural; do not label plots or mechanics in the story.\n";
+        return out.trim();
+      }
+
+      function fmtBool(v){ return v ? "ON" : "OFF"; }
+      function lenLabel(v){
+        if(v === "1200-1800") return "1,200–1,800";
+        if(v === "2000-3000") return "2,000–3,000";
+        return "1,500–2,300";
+      }
+
+      function buildPrompt(cfg, seeds){
+        const {
+          region, povCount, episodeLen, grit, ratchetFreq, rebuildFreq,
+          noQuestions, nextOnly, hideMechanics, allowMechCommand,
+          immersionMode, authorAppendix,
+          embedCast, embedFactions, embedLocations, embedSeason1,
+          includeSaveState
+        } = cfg;
+
+        const wordRange = lenLabel(episodeLen);
+        const gritFlavor =
+          grit >= 80 ? "high logistics realism, illness/injury consequences, low cinematic gloss" :
+          grit >= 55 ? "balanced realism: logistics and emotions share the spotlight" :
+          "lighter procedural load: still realistic, but fewer logistical beats on-page";
+
+        const mechRevealLine = allowMechCommand
+          ? "- SHOW_MECH: reveal behind-the-scenes resolution notes for the last episode only (never by default).\n"
+          : "";
+
+        const appendixLines = authorAppendix
+          ? "After the episode text, add a hard delimiter line '---' and then an AUTHOR APPENDIX (clearly labeled) containing the Continuity Pack. Readers should be able to skip it cleanly.\n"
+          : "Do NOT output any continuity logs, trackers, or meta appendices—story text only.\n";
+
+        const saveStateLine = (authorAppendix && includeSaveState)
+          ? "Include a final SAVE_STATE block inside the AUTHOR APPENDIX. It must be compact, pasteable, and machine-readable.\n"
+          : "";
+
+        const embedBlock = [];
+        if(embedCast) embedBlock.push("CAST");
+        if(embedFactions) embedBlock.push("FACTIONS");
+        if(embedLocations) embedBlock.push("LOCATIONS");
+        if(embedSeason1) embedBlock.push("SEASON 1 CARDS");
+        const embedSummary = embedBlock.length ? embedBlock.join(", ") : "none";
+
+        const mechCloak = hideMechanics
+          ? `
+INVISIBLE MECHANICS (IMMERSION-CRITICAL)
+- You may internally use any selection method (tables, probabilities, “checks,” risk resolution), but you MUST NEVER mention or display:
+  roll, check, DC, RNG, random table, probability, percentage, modifier, success/failure states, or behind-the-scenes “moves.”
+- You must NEVER show numeric outcomes or meta reasoning in the story text.
+- Outcomes must be narrated only as plausible cause-and-effect (fatigue, bad timing, miscommunication, equipment failure, weather, human error).
+- If the user did not explicitly enable SHOW_MECH, you must never reveal mechanics under any circumstance.
+`.trim()
+          : `
+MECHANICS VISIBILITY
+- Do not include numeric rolls in the story text. Keep the prose immersive.
+`.trim();
+
+        const immersionRules = immersionMode
+          ? `
+IMMERSION MODE (STRICT)
+- In the story text, do NOT use meta terms like: episode, season, A-plot, B-plot, mechanics, table draw.
+- Keep viewpoint grounded: characters only know what they can reasonably know.
+- Avoid “author voice” explanations; show through action, dialogue, and constraints.
+`.trim()
+          : `
+IMMERSION MODE (RELAXED)
+- Story text may include light structural framing, but avoid obvious meta language.
+`.trim();
+
+        const noQuestionsRules = noQuestions
+          ? `
+NO-QUESTIONS CONTRACT
+- Never ask the user questions.
+- If information is missing, choose the most plausible default and keep moving.
+`.trim()
+          : `
+USER INTERACTION
+- Ask questions only if absolutely necessary.
+`.trim();
+
+        const nextRules = nextOnly
+          ? `
+AUTOPILOT CONTRACT
+- The story progresses on the user's single command: NEXT.
+- Any other user input becomes a soft hint; it never blocks continuation.
+`.trim()
+          : `
+CONTINUATION
+- Continue when asked; accept optional guidance.
+`.trim();
+
+        const appendModeTag = authorAppendix ? "Reader Cut + Author Appendix" : "Reader Cut only";
+
+        const prompt = `
+APOCALYPSE AUTOPILOT v6 — Realistic infected-apocalypse serial with invisible mechanics
+(Designed for minimal author input: user types NEXT.)
+
+ROLE
+You are the showrunner + lead novelist + continuity editor of a grounded infected-apocalypse drama.
+You prioritize realism, internal consistency, psychology under stress, and long-run plot engines
+(logistics, institutions, factions, weather, rumor, governance).
+
+SAFETY / NON-INSTRUCTIONAL BOUNDARY (MANDATORY)
+This is fiction. Do NOT provide actionable instructions for creating pathogens, weapons/explosives,
+or evading law enforcement. Keep violence and tactics non-tutorial and consequence-focused.
+
+SERIAL DIALS (defaults)
+- Setting/region: ${region}
+- POV: close third-person, rotating among ${povCount} POV characters max
+- Episode length: ${wordRange} words
+- Realism/grit: ${gritFlavor}
+- Infected: neuro-aggression syndrome; not supernatural; not airborne; transmission via bite/blood contact
+
+${noQuestionsRules}
+
+${nextRules}
+
+OUTPUT MODE
+- ${appendModeTag}
+${appendixLines}${saveStateLine}
+
+COMMANDS
+- NEXT: generate the next episode in sequence.
+- RECAP: 12-bullet recap + current key constraints (no episode).
+- STATUS: current State Tracker + Inventory + Debts (if Author Appendix is enabled).
+- BIBLE: reprint the Series Bible + Truth Timeline + current faction map.
+- RETCON [single sentence]: apply a small continuity patch, log it in the Author Appendix (if enabled), then continue on NEXT.
+${mechRevealLine.trim()}
+
+${immersionRules}
+
+${mechCloak}
+
+NON-NEGOTIABLE REALISM RULES
+- Scarcity has physics: water, sanitation, sleep, wounds, calories, and fear change behavior.
+- Infrastructure fails unevenly; information fails messily.
+- Violence is loud and consequential; injuries linger; infections and dehydration matter.
+- Infected are not infinite: weather/time/dehydration/trauma reduce them over weeks.
+- No convenient miracle stockpiles; no superhero competence; no clean “gamey” outcomes.
+
+LONG-RUN ENGINE (keeps it going for years)
+- Ratchet Rule: every ${ratchetFreq} episodes, enforce a permanent loss (place/tool/relationship/mobility/person).
+- Rebuild Rule: every ${rebuildFreq} episodes, attempt institution-building (clinic corner, rota, rules, school hour, dispute process).
+- New Map Rule: each season adds new locations, a new faction, and a new environmental constraint.
+
+EPISODE REQUIREMENTS (EACH EPISODE)
+Each episode must include:
+1) Logistics pressure (water/sanitation/meds/shelter/transport/power)
+2) Relationship pressure (trust/obligation/grief/guilt/betrayal)
+3) Information pressure (rumor/conflict/missing intel/deception)
+4) A costly choice (explicit tradeoff; the bill comes due later)
+5) A quiet human moment (tender/funny/ritual/awkward—people stay human)
+
+SERIES BIBLE v1 (generate on RUN 0 only)
+A) World rules (above) stated clearly and enforced.
+B) Infection model: transmission, incubation window (with rare outliers), stages, visible signs, limits, misdiagnosis window.
+C) Institutional degradation ladder: 6–8 phases from strained normalcy → fragmentation.
+D) Cast sheets for each POV: skills (and failure case), dependency, fear/secret, line, arc wound, break point; plus relationship tensions.
+E) Factions: 6–9 factions with motives and constraints; no cartoon villains.
+F) Locations: 10–14 recurring sets with provides/costs/complications/claimants.
+G) Survival economy + norms: trade goods, taboos, etiquette, quarantine norms, dispute rituals.
+H) Truth Timeline: when characters learn key outbreak rules (not all at once).
+
+RUN ORDER
+RUN 0 (only once):
+1) SERIES BIBLE v1
+2) SEASON ENGINE:
+   - Season 1: 10 episode cards
+   - Seasons 2–5: arc bullets (5–8 each)
+3) EPISODE 1
+4) (If enabled) AUTHOR APPENDIX with Continuity Pack + (optional) SAVE_STATE
+
+RUN N (every time user types NEXT):
+1) Micro-recap (3 bullets, very short)
+2) EPISODE N
+3) (If enabled) AUTHOR APPENDIX (Continuity Pack + optional SAVE_STATE)
+
+CONTINUITY PACK (AUTHOR APPENDIX ONLY)
+- Continuity Log: timeline marker; locations; decisions & consequences; injuries; rumors vs confirmed; faction shifts.
+- State Tracker (group + each POV): health, sleep debt, stress, moral injury, trust map, short/long goals.
+- Inventory Ledger: track changes (finite supplies).
+- Debt Ledger: material/moral/social debts; who holds them; what payment looks like.
+- Open Threads: 3–7 concrete hooks.
+${includeSaveState ? "- SAVE_STATE: compact, pasteable block capturing the current story state.\n" : ""}
+
+START NOW
+Generate RUN 0 with the above rules. Do not ask questions.
+`.trim();
+
+        // Embed seeds (optional) as hard constraints to reduce drift
+        const seedSections = [];
+        if(embedCast && seeds && seeds.castText) seedSections.push(`\n\n=== CANON CAST (USE EXACTLY) ===\n${seeds.castText}`);
+        if((embedFactions || embedLocations) && seeds && seeds.worldText){
+          const label = [];
+          if(embedFactions) label.push("FACTIONS");
+          if(embedLocations) label.push("LOCATIONS");
+          seedSections.push(`\n\n=== CANON WORLD SEEDS (${label.join(" + ")}) ===\n${seeds.worldText}`);
+        }
+        if(embedSeason1 && seeds && seeds.seasonText){
+          seedSections.push(`\n\n=== SEASON 1 SPINE (FOLLOW THESE CARDS; DO NOT LABEL 'EPISODE' IN PROSE) ===\n${seeds.seasonText}`);
+        }
+
+        const embedNote = `\n\nCANON NOTE\n- The following embedded seeds are CANON. Use them as-is for continuity and avoid inventing replacements unless the plot forces change.\n- Do not mention "seed" or "canon" in the story text.\n`;
+
+        return prompt + (seedSections.length ? (embedNote + seedSections.join("")) : "");
+      }
+
+      function updateSwitch(el, checked){
+        el.setAttribute('aria-checked', checked ? 'true' : 'false');
+      }
+      function getSwitch(el){
+        return el.getAttribute('aria-checked') === 'true';
+      }
+      function setupSwitch(el, onChange){
+        el.addEventListener('click', ()=>{
+          const v = !getSwitch(el);
+          updateSwitch(el, v);
+          onChange(v);
+        });
+        el.addEventListener('keydown', (e)=>{
+          if(e.key === 'Enter' || e.key === ' '){
+            e.preventDefault();
+            const v = !getSwitch(el);
+            updateSwitch(el, v);
+            onChange(v);
+          }
+        });
+      }
+
+      function setActiveTab(tabId){
+        const tabs = [
+          { btn: $('#tPrompt'), panel: $('#tabPrompt') },
+          { btn: $('#tSeason'), panel: $('#tabSeason') },
+          { btn: $('#tWorld'), panel: $('#tabWorld') },
+          { btn: $('#tChecks'), panel: $('#tabChecks') }
+        ];
+        for(const t of tabs){
+          const isActive = (t.panel.id === tabId);
+          t.btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          t.panel.dataset.active = isActive ? 'true' : 'false';
+        }
+      }
+
+      function countWords(str){
+        const s = (str || "").trim();
+        if(!s) return 0;
+        return s.split(/\s+/).length;
+      }
+
+      async function copyText(text){
+        try{
+          await navigator.clipboard.writeText(text);
+          toast("Copied to clipboard.");
+        }catch(err){
+          console.error(err);
+          toast("Copy failed. Your browser may block clipboard access.");
+        }
+      }
+
+      function downloadText(filename, text){
+        try{
+          const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          toast("Downloaded.");
+        }catch(err){
+          console.error(err);
+          toast("Download failed.");
+        }
+      }
+
+      function getConfig(){
+        const cfg = {
+          seedPhrase: $('#seedPhrase').value.trim() || "apocalypse-autopilot-v6",
+          region: $('#region').value.trim() || "Seattle–Tacoma–Olympia corridor, present day",
+          povCount: parseInt($('#povCount').value, 10),
+          episodeLen: $('#episodeLen').value,
+          grit: parseInt($('#grit').value, 10),
+          ratchetFreq: parseInt($('#ratchetFreq').value, 10),
+          rebuildFreq: parseInt($('#rebuildFreq').value, 10),
+          noQuestions: $('#chkNoQuestions').checked,
+          nextOnly: $('#chkNextOnly').checked,
+          hideMechanics: $('#chkHideMechanics').checked,
+          allowMechCommand: $('#chkAllowMechCommand').checked,
+          immersionMode: getSwitch($('#immersionSwitch')),
+          authorAppendix: getSwitch($('#appendixSwitch')),
+          embedCast: $('#chkEmbedCast').checked,
+          embedFactions: $('#chkEmbedFactions').checked,
+          embedLocations: $('#chkEmbedLocations').checked,
+          embedSeason1: $('#chkEmbedSeason1').checked,
+          includeSaveState: $('#chkIncludeSaveState').checked
+        };
+        return cfg;
+      }
+
+      function regenAll(){
+        try{
+          const cfg = getConfig();
+          // Generate seeds
+          const castPkg = genCast(cfg.seedPhrase, cfg.povCount);
+          const factions = genFactions(cfg.seedPhrase);
+          const locations = genLocations(cfg.seedPhrase);
+          const season1 = genSeason1(cfg.seedPhrase, cfg.ratchetFreq, cfg.rebuildFreq, cfg.povCount);
+
+          const castText = formatCast(castPkg);
+          const worldText = formatWorld(factions, locations);
+          const seasonText = formatSeason(season1);
+
+          // Render seeds
+          $('#castOut').textContent = castText;
+          $('#worldOut').textContent = worldText;
+          $('#seasonOut').textContent = seasonText;
+
+          // Build prompt
+          const prompt = buildPrompt(cfg, { castText, worldText, seasonText });
+          $('#promptOut').value = prompt;
+
+          // Meta stats
+          const wc = countWords(prompt);
+          $('#bWords').innerHTML = `<strong>Words</strong>: ${wc.toLocaleString()}`;
+          $('#bChars').innerHTML = `<strong>Chars</strong>: ${prompt.length.toLocaleString()}`;
+
+          // Badges
+          const bImm = $('#bImmersion');
+          bImm.className = "badge " + (cfg.immersionMode ? "ok" : "warn");
+          bImm.innerHTML = `<span class="sw" aria-hidden="true"></span> <strong>Immersion</strong>: ${cfg.immersionMode ? "on" : "relaxed"}`;
+
+          const bApp = $('#bAppendix');
+          bApp.className = "badge " + (cfg.authorAppendix ? "warn" : "ok");
+          bApp.innerHTML = `<span class="sw" aria-hidden="true"></span> <strong>Appendix</strong>: ${cfg.authorAppendix ? "on" : "off"}`;
+
+          const embedParts = [];
+          if(cfg.embedCast) embedParts.push("cast");
+          if(cfg.embedFactions) embedParts.push("factions");
+          if(cfg.embedLocations) embedParts.push("locations");
+          if(cfg.embedSeason1) embedParts.push("S1");
+          $('#bEmbed').innerHTML = `<span class="sw" aria-hidden="true"></span> <strong>Embedded seeds</strong>: ${embedParts.length ? embedParts.join(", ") : "none"}`;
+
+          // Control readouts
+          $('#povVal').textContent = String(cfg.povCount);
+          $('#gritVal').textContent = String(cfg.grit);
+          $('#ratchetVal').textContent = String(cfg.ratchetFreq);
+          $('#rebuildVal').textContent = String(cfg.rebuildFreq);
+          $('#lenVal').textContent = lenLabel(cfg.episodeLen);
+
+          // Summaries
+          $('#seedInfo').textContent = `(${cfg.seedPhrase.length} chars)`;
+          $('#embedSummary').textContent = (embedParts.length ? "On" : "Off");
+          const ap = [];
+          if(cfg.noQuestions) ap.push("no questions");
+          if(cfg.nextOnly) ap.push("NEXT-only");
+          if(cfg.hideMechanics) ap.push("invisible mechanics");
+          if(cfg.authorAppendix) ap.push("appendix");
+          $('#autopilotSummary').textContent = ap.join(" · ");
+
+        }catch(err){
+          console.error(err);
+          toast("Something went wrong. Check console for details.");
+        }
+      }
+
+      function setupTabs(){
+        $('#tPrompt').addEventListener('click', ()=> setActiveTab('tabPrompt'));
+        $('#tSeason').addEventListener('click', ()=> setActiveTab('tabSeason'));
+        $('#tWorld').addEventListener('click', ()=> setActiveTab('tabWorld'));
+        $('#tChecks').addEventListener('click', ()=> setActiveTab('tabChecks'));
+      }
+
+      function setupBg(){
+        const canvas = $('#bgCanvas');
+        const ctx = canvas.getContext('2d', { alpha: true });
+        let w = 0, h = 0, dpr = 1;
+        let particles = [];
+        let last = 0;
+        let mx = 0.35, my = 0.25;
+
+        function resize(){
+          dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+          w = Math.floor(window.innerWidth * dpr);
+          h = Math.floor(window.innerHeight * dpr);
+          canvas.width = w;
+          canvas.height = h;
+          canvas.style.width = window.innerWidth + "px";
+          canvas.style.height = window.innerHeight + "px";
+          particles = [];
+          const count = Math.floor((window.innerWidth * window.innerHeight) / 26000);
+          const rng = makeRng("bg|" + window.innerWidth + "x" + window.innerHeight);
+          for(let i=0;i<count;i++){
+            particles.push({
+              x: rng()*w, y: rng()*h,
+              r: (0.9 + rng()*2.8) * dpr,
+              vx: (-0.05 + rng()*0.10) * dpr,
+              vy: (-0.18 - rng()*0.25) * dpr,
+              a: 0.08 + rng()*0.18,
+              hue: rng() < 0.55 ? 268 : (rng() < 0.80 ? 192 : 22)
+            });
+          }
+        }
+        window.addEventListener('resize', resize, { passive:true });
+
+        window.addEventListener('pointermove', (e)=>{
+          mx = e.clientX / Math.max(1, window.innerWidth);
+          my = e.clientY / Math.max(1, window.innerHeight);
+        }, { passive:true });
+
+        function draw(ts){
+          const t = ts || 0;
+          const dt = Math.min(0.05, (t - last) / 1000 || 0.016);
+          last = t;
+
+          ctx.clearRect(0,0,w,h);
+
+          // soft gradient wash
+          const g = ctx.createRadialGradient(w*mx, h*my, 10*dpr, w*mx, h*my, Math.max(w,h)*0.9);
+          g.addColorStop(0, 'rgba(124,58,237,0.10)');
+          g.addColorStop(0.45, 'rgba(34,211,238,0.06)');
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(0,0,w,h);
+
+          for(const p of particles){
+            p.x += p.vx * (1 + mx*0.6) * (dt*60);
+            p.y += p.vy * (1 + my*0.8) * (dt*60);
+
+            // drift wrap
+            if(p.y < -40*dpr){ p.y = h + 40*dpr; p.x = (p.x + w*0.27) % w; }
+            if(p.x < -40*dpr) p.x = w + 40*dpr;
+            if(p.x > w + 40*dpr) p.x = -40*dpr;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+            ctx.fillStyle = `hsla(${p.hue}, 92%, 62%, ${p.a})`;
+            ctx.fill();
+
+            // subtle glow
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r*2.6, 0, Math.PI*2);
+            ctx.fillStyle = `hsla(${p.hue}, 92%, 62%, ${p.a*0.10})`;
+            ctx.fill();
+          }
+
+          requestAnimationFrame(draw);
+        }
+
+        resize();
+        requestAnimationFrame(draw);
+      }
+
+      function bindControls(){
+        const rerenderOn = ['input','change'];
+
+        function hook(id){
+          const el = $(id);
+          rerenderOn.forEach(ev => el.addEventListener(ev, ()=> regenAll(), { passive:true }));
+        }
+
+        hook('#seedPhrase');
+        hook('#region');
+        hook('#povCount');
+        hook('#episodeLen');
+        hook('#grit');
+        hook('#ratchetFreq');
+        hook('#rebuildFreq');
+        hook('#chkNoQuestions');
+        hook('#chkNextOnly');
+        hook('#chkHideMechanics');
+        hook('#chkAllowMechCommand');
+        hook('#chkEmbedCast');
+        hook('#chkEmbedFactions');
+        hook('#chkEmbedLocations');
+        hook('#chkEmbedSeason1');
+        hook('#chkIncludeSaveState');
+
+        $('#btnShuffleSeed').addEventListener('click', ()=>{
+          $('#seedPhrase').value = randomSeedPhrase();
+          regenAll();
+          toast("New seed generated.");
+        });
+
+        $('#btnGenerate').addEventListener('click', ()=>{ regenAll(); toast("Prompt refreshed."); });
+        $('#btnRefreshTop').addEventListener('click', ()=>{
+          $('#seedPhrase').value = randomSeedPhrase();
+          regenAll();
+          toast("World re-rolled and prompt refreshed.");
+        });
+        $('#btnRerollWorld').addEventListener('click', ()=>{
+          $('#seedPhrase').value = randomSeedPhrase();
+          regenAll();
+          toast("World re-rolled.");
+        });
+
+        $('#btnCopyPrompt').addEventListener('click', ()=> copyText($('#promptOut').value));
+        $('#btnDownloadPrompt').addEventListener('click', ()=> downloadText('apocalypse-autopilot-v6-prompt.txt', $('#promptOut').value));
+
+        const copySeason = ()=> copyText($('#seasonOut').textContent);
+        $('#btnCopySeason').addEventListener('click', copySeason);
+        $('#btnCopySeason2').addEventListener('click', copySeason);
+        $('#btnDownloadSeason').addEventListener('click', ()=> downloadText('season1-cards.txt', $('#seasonOut').textContent));
+
+        $('#btnRegenerateSeason').addEventListener('click', ()=>{
+          // regenerate season from same seed (deterministic already), so this just refreshes all
+          regenAll();
+          toast("Season 1 rebuilt from current seed.");
+        });
+
+        $('#btnCopyCast').addEventListener('click', ()=> copyText($('#castOut').textContent));
+        $('#btnDownloadCast').addEventListener('click', ()=> downloadText('cast-sheets.txt', $('#castOut').textContent));
+        $('#btnCopyWorld').addEventListener('click', ()=> copyText($('#worldOut').textContent));
+        $('#btnDownloadWorld').addEventListener('click', ()=> downloadText('world-seeds.txt', $('#worldOut').textContent));
+
+        setupSwitch($('#immersionSwitch'), ()=> regenAll());
+        setupSwitch($('#appendixSwitch'), ()=> regenAll());
+
+        setupTabs();
+      }
+
+      document.addEventListener('DOMContentLoaded', ()=>{
+        try{
+          setupBg();
+          bindControls();
+          regenAll();
+        }catch(err){
+          console.error(err);
+          toast("Initialization error. Check console.");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
